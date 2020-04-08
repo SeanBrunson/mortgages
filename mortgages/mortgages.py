@@ -10,14 +10,14 @@ def calc_pmt(loan_amount, r_monthly, months, fv=0):
     Parameters
     ----------
     loan_amount: float
-        Loan amount
+        Current loan amount
     r_monthly: float
         Monthly interest rate
     months: int
-        Number of months of the loan
+        Number of months remaining on the loan
     fv: float
         Outstanding loan balance in the final period.
-        Assumes the loan is full paid off.
+        Assumes the loan will be fully paid off.
 
     Returns
     -------
@@ -37,27 +37,35 @@ class mortgage(object):
     Parameters
     ----------
     loan_amount: float 
-        Loan amount
+        Current loan amount
     r_annual: float
         Yearly interest rate
     years:
-        Number of years of the loan
+        Number of years remaining on the loan
+    fv: float
+        Outstanding loan balance in the final period.
+        Assumes the loan will be fully paid off.
+    pts: float
+        Discount points paid directly to the lender
     """
 
-    def __init__(self, loan_amount, r_annual, years):
+    def __init__(self, loan_amount, r_annual, years, fv=0.0, pts=0.0):
         self.loan_amount = loan_amount
         self.r_monthly = r_annual / 12.0
         self.months = years * 12
+        self.fv = fv
+        self.pts = pts
         self.vec_pmt = [0.0]
         self.vec_int = [0.0]
         self.vec_principal = [0.0]
         self.vec_balance = [loan_amount]
-        self.pmt = calc_pmt(loan_amount, self.r_monthly, self.months)
+        self.pmt = calc_pmt(loan_amount, self.r_monthly, self.months, self.fv)
+        self.upfront = loan_amount * (pts/100.0)
         self.legend = None
 
     def update_loan(self):
         """
-        Updates the loan amount by the monthly amount paid.
+        Updates the current loan amount by the monthly principal paid.
         """
 
         #Find the interest and principal amount paid for the month:
@@ -112,40 +120,22 @@ class fixed(mortgage):
 
     Parameters
     ----------
-    loan_amount: float
-        Loan amount
-    r_monthly: float
-        Monthly interest rate
-    months: int
-        Number of months of the loan
-    """
-
-    def __init__(self, loan_amount, r_monthly, months):
-        mortgage.__init__(self, loan_amount, r_monthly, months)
-        self.legend = 'Fixed, ' + str(r_monthly*100.0) + '%'
-
-class fixed_with_points(mortgage):
-    """
-    Class for fixed rate mortgages with points.
-
-    Parameters
-    ----------
-    loan_amount: float
-        Loan amount
-    r_monthly: float
-        Monthly interest rate
-    months: int
-        Number of months of the loan
+    loan_amount: float 
+        Current loan amount
+    r_annual: float
+        Yearly interest rate
+    years:
+        Number of years remaining on the loan
+    fv: float
+        Outstanding loan balance in the final period.
+        Assumes the loan will be fully paid off.
     pts: float
         Discount points paid directly to the lender
     """
 
-    def __init__(self, loan_amount, r_monthly, months, pts):
-        mortgage.__init__(self, loan_amount, r_monthly, months)
-        self.pts = pts
-        self.paid = [loan_amount * (pts/100.0)]
-        self.legend = 'Fixed, ' + str(r_monthly*100.0) + '%, ' \
-                      + str(pts) + ' points'
+    def __init__(self, loan_amount, r_annual, years, fv=0.0, pts=0.0):
+        mortgage.__init__(self, loan_amount, r_annual, years, fv, pts)
+        self.legend = 'Fixed, ' + str(self.r_monthly*100.0) + '%'
 
 class adjustable(mortgage):
     """
@@ -153,33 +143,40 @@ class adjustable(mortgage):
 
     Parameters
     ----------
-    loan_amount: float
-        Loan amount
-    r_monthly: float
-        Monthly interest rate
-    months: int
-        Number of months of the loan
-    teaser_r: float
+    loan_amount: float 
+        Current loan amount
+    r_annual: float
+        Yearly interest rate
+    years:
+        Number of years remaining on the loan
+    r_teaser: float
         Initial annual interest rate for a certain period
-    teaser_months: int
-        Number of months for the teaser rate
+    years_teaser: int
+        Number of years for the teaser rate
+    fv: float
+        Outstanding loan balance in the final period.
+        Assumes the loan will be fully paid off.
+    pts: float
+        Discount points paid directly to the lender
     """
 
-    def __init__(self, loan_amount, r_monthly, months, teaser_r, teaser_months):
-        mortgage.__init__(self, loan_amount, r_monthly, months)
-        self.teaser_months = teaser_months
-        self.teaser_r = teaser_r
-        self.next_r = r / 12.0
-        self.legend = str(teaser_r*100.0) + '% for ' \
-                      + str(teaser_months) \
-                      + ' months, then ' + str(r*100.0) + '%'
+    def __init__(self, loan_amount, r_annual, years, r_teaser, years_teaser,
+                 fv=0.0, pts=0.0):
+        mortgage.__init__(self, loan_amount, r_teaser, years_teaser, fv, pts)
+        self.months_teaser = years_teaser / 12
+        self.r_teaser = r_teaser
+        self.next_r = r_annual / 12.0
+        self.legend = str(self.r_teaser*100.0) + '% for ' \
+                      + str(self.teaser_months) \
+                      + ' months, then ' + str(self.r_annual*100.0) + '%'
 
     def update_loan(self):
         """
-        Updates the loan amount by the monthly amount paid.
+        Updates the r_monthly to the new value, recalculates payment, and
+        updates the loan amount by the monthly principal paid.
         """
 
-        if len(self.vec_pmt) == self.teaser_months + 1:
+        if len(self.vec_pmt) == self.months_teaser + 1:
             self.r_monthly = self.next_r
             self.pmt = calc_pmt(loan_amount = self.vec_balance[-1],
                                 r_monthly = self.r_monthly,
