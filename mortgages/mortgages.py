@@ -2,7 +2,7 @@
 
 import matplotlib.pyplot as plt
 
-def calc_pmt(loan_amount, r_monthly, months):
+def calc_pmt(loan_amount, r_monthly, months, fv=0):
     """
     Finds the monthly payment on a loan using the
     monthly rate and number of months.
@@ -15,6 +15,9 @@ def calc_pmt(loan_amount, r_monthly, months):
         Monthly interest rate
     months: int
         Number of months of the loan
+    fv: float
+        Outstanding loan balance in the final period.
+        Assumes the loan is full paid off.
 
     Returns
     -------
@@ -22,7 +25,8 @@ def calc_pmt(loan_amount, r_monthly, months):
         Monthly payment
     """
 
-    pmt = r_monthly*loan_amount / (1 - (1+r_monthly)**-months)
+    pv = loan_amount + (fv / (1+r_monthly)**months)
+    pmt = r_monthly*pv / (1 - (1+r_monthly)**-months)
 
     return pmt
 
