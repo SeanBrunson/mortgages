@@ -1,2 +1,2 @@
 # mortgages
-Compute mortgage payments
+Compute fixed rate and adjustable rate mortgage payments
