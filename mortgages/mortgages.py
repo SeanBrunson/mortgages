@@ -162,13 +162,12 @@ class adjustable(mortgage):
 
     def __init__(self, loan_amount, r_annual, years, r_teaser, years_teaser,
                  fv=0.0, pts=0.0):
-        mortgage.__init__(self, loan_amount, r_teaser, years_teaser, fv, pts)
-        self.months_teaser = years_teaser / 12
-        self.r_teaser = r_teaser
+        mortgage.__init__(self, loan_amount, r_teaser, years, fv, pts)
+        self.months_teaser = years_teaser * 12
         self.next_r = r_annual / 12.0
-        self.legend = str(self.r_teaser*100.0) + '% for ' \
-                      + str(self.teaser_months) \
-                      + ' months, then ' + str(self.r_annual*100.0) + '%'
+        self.legend = str(self.r_monthly*100.0) + '% for ' \
+                      + str(self.months_teaser) \
+                      + ' months, then ' + str(self.next_r*100.0) + '%'
 
     def update_loan(self):
         """
