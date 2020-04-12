@@ -1,8 +1,9 @@
-#Class to calculate stylized version of MBS value with prepayment:
+# Class to calculate stylized version of MBS value with prepayment:
 
 import numpy as np
 import pandas as pd
 import mortgages
+
 
 def calc_smm(coupon_rate, market_rates):
     """
@@ -23,13 +24,14 @@ def calc_smm(coupon_rate, market_rates):
         mortgage-backed securities that is prepaid in a given month.
     """
 
-    #Calculate rate difference:
+    # Calculate rate difference:
     diff_rate = coupon_rate - market_rates
 
-    #Calculate smm value:
-    smm = 0.01 / (1+np.exp(-diff_rate*100.0))
+    # Calculate smm value:
+    smm = 0.01/(1 + np.exp(-diff_rate*100.0))
 
     return smm
+
 
 def calc_cpr(smm):
     """
@@ -50,11 +52,12 @@ def calc_cpr(smm):
         outstanding principal is paid off.
     """
 
-    cpr = 1.0 - ((1.0-smm)**12)
+    cpr = 1.0 - ((1.0 - smm)**12)
 
     return cpr
 
-class mbs(object):
+
+class Mbs(object):
     """
     Class for mortgage backed securities. Assumes one type of loan for now.
 
@@ -83,15 +86,15 @@ class mbs(object):
         Checks whether smm is of the right type and length.
         """
 
-        #Check if smm is an array:
+        # Check if smm is an array:
         if type(smm) is not np.ndarray:
-            smm = np.ones(1) * smm
+            smm = np.ones(1)*smm
 
-        #Change length if length = 1:
+        # Change length if length = 1:
         if len(smm) == 1:
-            smm = np.ones(self.mortgage.months + 1) * smm
+            smm = np.ones(self.mortgage.months + 1)*smm
 
-        #Check if smm is of length 1 or length self.mortgage.months + 1:
+        # Check if smm is of length 1 or length self.mortgage.months + 1:
         if (len(smm) != 1) and (len(smm) != (self.mortgage.months + 1)):
             raise ValueError("smm must have length 1 or length \
                     {}".format(self.mortgage.months + 1))
@@ -105,34 +108,35 @@ class mbs(object):
         prepaid principal.
         """
 
-        #Make copy of the amortization schedule:
+        # Make copy of the amortization schedule:
         pooled = self.mortgage.amort.copy()
 
-        #Add SMM and pool factor:
+        # Add SMM and pool factor:
         pooled["smm"] = self.smm.tolist()
         pooled["smm"][0] = 0.0
         pooled["pool_factor"] = self.pool_factor
 
-        #Create updated pool factor so that it decreases over time given SMM:
-        pooled["pool_factor_shift"] = pooled.pool_factor.shift(1) * (1.0-pooled.smm)
+        # Create updated pool factor so that it decreases over time given SMM:
+        pooled["pool_factor_shift"] = pooled.pool_factor.shift(1)*(1.0 - pooled.smm)
         pooled["pool_factor"] = np.cumprod(pooled.pool_factor_shift)
         pooled["pool_factor"][0] = self.pool_factor
         pooled = pooled.drop(columns=["pool_factor_shift"])
 
-        #Reshift updated pool factor to adjust payment, interest, and principal:
+        # Reshift updated pool factor to adjust payment, interest, and principal:
         pooled["pool_factor_shift"] = pooled.pool_factor.shift(1)
-        pooled["pool_balance"] = pooled.balance * pooled.pool_factor
-        pooled["pool_pmt"] = pooled.payment * pooled.pool_factor_shift
-        pooled["pool_interest"] = pooled.interest * pooled.pool_factor_shift
+        pooled["pool_balance"] = pooled.balance*pooled.pool_factor
+        pooled["pool_pmt"] = pooled.payment*pooled.pool_factor_shift
+        pooled["pool_interest"] = pooled.interest*pooled.pool_factor_shift
         pooled["pool_principal"] = pooled.pool_pmt - pooled.pool_interest
-        pooled["prepay_dollars"] = ((pooled.pool_balance-pooled.pool_principal.shift(-1)) * pooled.smm.shift(-1)).shift(1)
+        pooled["prepay_dollars"] = ((pooled.pool_balance - pooled.pool_principal.shift(-1))*pooled.smm.shift(-1)).shift(
+            1)
         pooled["total_principal"] = pooled.pool_principal + pooled.prepay_dollars
         pooled["total_cashflow"] = pooled.pool_interest + pooled.total_principal
 
-        #Fill NA with 0:
+        # Fill NA with 0:
         pooled = pooled.fillna(0)
 
-        #Subset to final columns:
+        # Subset to final columns:
         pooled = pooled.loc[:, ["smm", "pool_factor", "pool_balance",
                                 "pool_pmt", "pool_interest", "pool_principal",
                                 "prepay_dollars", "total_principal",

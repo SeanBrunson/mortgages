@@ -1,8 +1,9 @@
-#Class to calculate mortgage payments/amortization:
+# Class to calculate mortgage payments/amortization:
 
 import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
+
 
 def calc_pmt(loan_amount, r_monthly, months, fv=0):
     """
@@ -27,10 +28,11 @@ def calc_pmt(loan_amount, r_monthly, months, fv=0):
         Monthly payment
     """
 
-    pv = loan_amount + (fv / (1+r_monthly)**months)
-    pmt = r_monthly*pv / (1 - (1+r_monthly)**-months)
+    pv = loan_amount + (fv/(1 + r_monthly)**months)
+    pmt = r_monthly*pv/(1 - (1 + r_monthly)**-months)
 
     return pmt
+
 
 def calc_market_value(cashflow, market_rates, month_n, month_i=1):
     """
@@ -63,23 +65,24 @@ def calc_market_value(cashflow, market_rates, month_n, month_i=1):
         Market value of future cash flows
     """
 
-    #Make sure length of cashflow is equal to length of market_rates:
+    # Make sure length of cashflow is equal to length of market_rates:
     if len(cashflow) != len(market_rates):
         raise ValueError("cashflow and market_rates are not the same length.")
 
-    #Subset cashflow:
+    # Subset cashflow:
     remaining_payments = cashflow[month_i:]
 
-    #Get remaining market rates:
-    remaining_rates = 1.0 + (np.array(market_rates)[month_i:] / 12.0)
+    # Get remaining market rates:
+    remaining_rates = 1.0 + (np.array(market_rates)[month_i:]/12.0)
 
-    #Calculate discount rates:
-    discount_rates = np.cumprod(1 / remaining_rates)
+    # Calculate discount rates:
+    discount_rates = np.cumprod(1/remaining_rates)
 
-    #Calculate sum of the present value of the payments from month_i to self.months:
-    market_value = sum(remaining_payments * discount_rates)
+    # Calculate sum of the present value of the payments from month_i to self.months:
+    market_value = sum(remaining_payments*discount_rates)
 
     return market_value
+
 
 def calc_wal(cashflow, original_balance):
     """
@@ -98,18 +101,19 @@ def calc_wal(cashflow, original_balance):
         Weighted average life of the loan
     """
 
-    #Change cashflow to array:
+    # Change cashflow to array:
     cashflow = np.ones(1)*cashflow
 
-    #Find the length of cashflow:
+    # Find the length of cashflow:
     n = len(cashflow)
 
-    #Calculate WAL:
-    wal = sum(cashflow * list(range(n))) / original_balance
+    # Calculate WAL:
+    wal = sum(cashflow*list(range(n)))/original_balance
 
     return wal
 
-class mortgage(object):
+
+class Mortgage(object):
     """
     Class for different kinds of mortgages.
 
@@ -130,8 +134,8 @@ class mortgage(object):
 
     def __init__(self, loan_amount, r_annual, years, fv=0.0, pts=0.0):
         self.loan_amount = loan_amount
-        self.r_monthly = r_annual / 12.0
-        self.months = years * 12
+        self.r_monthly = r_annual/12.0
+        self.months = years*12
         self.fv = fv
         self.pts = pts
         self.vec_pmt = [0.0]
@@ -140,7 +144,7 @@ class mortgage(object):
         self.vec_balance = [loan_amount]
         self.pmt = calc_pmt(loan_amount, self.r_monthly, self.months, self.fv)
         self.amort = self.create_amortization_schedule()
-        self.upfront = loan_amount * (pts/100.0)
+        self.upfront = loan_amount*(pts/100.0)
         self.legend = None
 
     def update_loan(self, month_i):
@@ -153,13 +157,13 @@ class mortgage(object):
             Current month
         """
 
-        #Check to make sure length of payments is less than total months:
+        # Check to make sure length of payments is less than total months:
         if len(self.vec_pmt) <= (self.months + 1):
-            #Find the interest and principal amount paid for the month:
-            interest = self.vec_balance[-1] * self.r_monthly
+            # Find the interest and principal amount paid for the month:
+            interest = self.vec_balance[-1]*self.r_monthly
             principal = self.pmt - interest
 
-            #Update monthly vectors:
+            # Update monthly vectors:
             self.vec_pmt.append(self.pmt)
             self.vec_int.append(interest)
             self.vec_principal.append(principal)
@@ -172,15 +176,15 @@ class mortgage(object):
         Creates full amortization schedule and sets it in pandas DataFrame.
         """
 
-        #Loop through all payments:
+        # Loop through all payments:
         for m in range(self.months):
             self.update_loan(m)
 
-        #Create pandas DataFrame:
+        # Create pandas DataFrame:
         column_names = ["balance", "payment", "interest", "principal"]
         amort = pd.DataFrame(list(zip(self.vec_balance, self.vec_pmt,
                                       self.vec_int, self.vec_principal)),
-                             columns = column_names)
+                             columns=column_names)
 
         return amort
 
@@ -209,18 +213,19 @@ class mortgage(object):
         return self.legend
 
     def plot_payments(self, style):
-        plt.plot(self.vec_pmt[1:], style, label = self.legend)
+        plt.plot(self.vec_pmt[1:], style, label=self.legend)
 
     def plot_balance(self, style):
-        plt.plot(self.vec_balance, style, label = self.legend)
+        plt.plot(self.vec_balance, style, label=self.legend)
 
     def plot_interest(self, style):
-        plt.plot(self.vec_int[1:], style, label = self.legend)
+        plt.plot(self.vec_int[1:], style, label=self.legend)
 
     def plot_principal(self, style):
-        plt.plot(self.vec_principal[1:], style, label = self.legend)
+        plt.plot(self.vec_principal[1:], style, label=self.legend)
 
-class fixed(mortgage):
+
+class Fixed(Mortgage):
     """
     Class for fixed rate mortgages.
 
@@ -240,10 +245,11 @@ class fixed(mortgage):
     """
 
     def __init__(self, loan_amount, r_annual, years, fv=0.0, pts=0.0):
-        mortgage.__init__(self, loan_amount, r_annual, years, fv, pts)
+        Mortgage.__init__(self, loan_amount, r_annual, years, fv, pts)
         self.legend = 'Fixed, ' + str(self.r_monthly*100.0) + '%'
 
-class adjustable(mortgage):
+
+class Adjustable(Mortgage):
     """
     Class for adjustable rate mortgages.
 
@@ -269,9 +275,9 @@ class adjustable(mortgage):
 
     def __init__(self, loan_amount, r_annual, years, r_teaser, years_teaser,
                  fv=0.0, pts=0.0):
-        self.months_teaser = years_teaser * 12
-        self.next_r = self.check_r_annual(r_annual, years) / 12.0
-        mortgage.__init__(self, loan_amount, r_teaser, years, fv, pts)
+        self.months_teaser = years_teaser*12
+        self.next_r = self.check_r_annual(r_annual, years)/12.0
+        Mortgage.__init__(self, loan_amount, r_teaser, years, fv, pts)
         self.legend = str(self.r_monthly*100.0) + '% for ' \
                       + str(self.months_teaser) \
                       + ' months, then becomes adjustable'
@@ -282,14 +288,14 @@ class adjustable(mortgage):
         If r_annual is length 1, then make it length (months - months_teaser).
         """
 
-        #Get length of r_annual:
+        # Get length of r_annual:
         r_annual_length = len(np.ones(1)*r_annual)
 
-        #Set up new length:
+        # Set up new length:
         new_length = (years*12) - self.months_teaser
 
         if r_annual_length == 1:
-            r_annual = np.ones(new_length) * r_annual
+            r_annual = np.ones(new_length)*r_annual
 
         if (r_annual_length != 1) and (r_annual_length != new_length):
             raise ValueError("r_annual must be either length 1 or length {}".format(new_length))
@@ -309,8 +315,8 @@ class adjustable(mortgage):
 
         if len(self.vec_pmt) >= (self.months_teaser + 1):
             self.r_monthly = self.next_r[month_i - self.months_teaser]
-            self.pmt = calc_pmt(loan_amount = self.vec_balance[-1],
-                                r_monthly = self.r_monthly,
-                                months = self.months - month_i)
+            self.pmt = calc_pmt(loan_amount=self.vec_balance[-1],
+                                r_monthly=self.r_monthly,
+                                months=self.months - month_i)
 
-        mortgage.update_loan(self, month_i)
+        Mortgage.update_loan(self, month_i)
